@@ -30,5 +30,5 @@ func main() {
 		}(conn)
 	})
 
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
