@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	ws "github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 )
 
 var upgrader = ws.Upgrader{
@@ -16,6 +17,11 @@ var upgrader = ws.Upgrader{
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
