@@ -7,31 +7,34 @@ import (
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
-	c "github.com/uwezo-app/chat-server/controller"
+	"github.com/uwezo-app/chat-server/db"
 )
 
 type Key string
 
 func VerifyJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var access_token = strings.Split(r.Header.Get("Authorization"), " ")[1]
-		access_token = strings.TrimSpace(access_token)
+		var accessToken = strings.Split(r.Header.Get("Authorization"), " ")[1]
+		accessToken = strings.TrimSpace(accessToken)
 
-		if access_token == "" {
+		if accessToken == "" {
 			w.WriteHeader(http.StatusForbidden)
-			json.NewEncoder(w).Encode(struct {
+			err := json.NewEncoder(w).Encode(struct {
 				Code    int
 				Message string
 			}{
 				Code:    http.StatusForbidden,
 				Message: "Missing Auth Token",
 			})
+			if err != nil {
+				return
+			}
 			return
 		}
 
-		tk := &c.Token{}
+		tk := &db.Token{}
 
-		_, err := jwt.ParseWithClaims(access_token, tk, func(token *jwt.Token) (interface{}, error) {
+		_, err := jwt.ParseWithClaims(accessToken, tk, func(token *jwt.Token) (interface{}, error) {
 			return []byte("secret"), nil
 		})
 

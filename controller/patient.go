@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-)
 
-type Patient struct {
-	NickName string `json:"NickName"`
-}
+	"github.com/uwezo-app/chat-server/db"
+)
 
 // CreatePatient an implementation of patient's creation
 func CreatePatient(w http.ResponseWriter, r *http.Request) {
-	user := &Patient{}
+	user := &db.Patient{}
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
 		log.Fatal("Could not read the sent data")
@@ -29,7 +27,7 @@ func CreatePatient(w http.ResponseWriter, r *http.Request) {
 func AddProfileInformation(w http.ResponseWriter, r *http.Request) {}
 
 func PatientLoginHandler(w http.ResponseWriter, r *http.Request) {
-	user := &Patient{}
+	user := &db.Patient{}
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
 		var errorResponse = ErrorResponse {
