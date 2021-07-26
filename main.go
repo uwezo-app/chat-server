@@ -24,5 +24,6 @@ func main() {
 	}
 	r := router.Handlers()
 
+	log.Println("Starting server")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
 }

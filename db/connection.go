@@ -18,7 +18,7 @@ func ConnectDB() *gorm.DB {
 
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	user := os.Getenv("DATABASE_USER")
