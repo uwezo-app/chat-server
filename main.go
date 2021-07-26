@@ -21,7 +21,6 @@ func main() {
 	if port == "" {
 		port = strconv.Itoa(8000)
 	}
-
 	r := router.Handlers()
 	
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
