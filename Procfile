@@ -1,1 +1,1 @@
-web: chat-server
+web: bin/chat-server
