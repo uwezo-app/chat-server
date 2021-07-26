@@ -2,12 +2,12 @@ package db
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
 	"log"
 	"os"
 
-	_ "gorm.io/driver/postgres" //Gorm postgres dialect interface
+	"github.com/joho/godotenv"
+
+	"gorm.io/driver/postgres" //Gorm postgres dialect interface
 	"gorm.io/gorm"
 )
 
@@ -26,8 +26,9 @@ func ConnectDB() *gorm.DB {
 	dbName := os.Getenv("DATABASE_NAME")
 	dbHost := os.Getenv("DATABASE_HOST")
 	port := os.Getenv("DATABASE_PORT")
+	sslmode := os.Getenv("DATABASE_SSLMODE")
 
-	dns := fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=disable password=%s", dbHost, user, dbName, port, pass)
+	dns := fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=%s password=%s", dbHost, user, dbName, port, sslmode, pass)
 
 	db, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 	if err != nil {
