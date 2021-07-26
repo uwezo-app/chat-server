@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +18,9 @@ func main() {
 	}
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = strconv.Itoa(8000)
+	}
 	r := router.Handlers()
 	
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
