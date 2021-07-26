@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/uwezo-app/chat-server/router"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/uwezo-app/chat-server/router"
 
 	"github.com/joho/godotenv"
 )
@@ -14,7 +15,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	port := os.Getenv("PORT")
@@ -22,6 +23,6 @@ func main() {
 		port = strconv.Itoa(8000)
 	}
 	r := router.Handlers()
-	
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
 }
