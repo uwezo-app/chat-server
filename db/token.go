@@ -6,14 +6,16 @@ import (
 )
 
 type Token struct {
+	*jwt.StandardClaims
+
 	UserID		uint
 	Name        string
 	Email       string
-	*jwt.StandardClaims
 }
 
 type TokenString struct {
 	gorm.Model
+
 	ID			uint 	`gorm:"primarykey"`
 	Token       string 	`json:"Token"`
 }

@@ -21,7 +21,7 @@ func ConnectDB() *gorm.DB {
 		log.Println(err)
 	}
 
-	dns := connectEnv()
+	dns := getDNS()
 
 	db, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 	if err != nil {
@@ -38,7 +38,7 @@ func ConnectDB() *gorm.DB {
 	return db
 }
 
-func connectEnv() string {
+func getDNS() string {
 
 	if os.Getenv("APP_ENV") == "development" {
 		user := os.Getenv("DATABASE_USER")

@@ -10,3 +10,11 @@ type Psychologist struct {
 	Email     string `gorm:"type:varchar(100);unique_index;Email"`
 	Password  string `json:"Password"`
 }
+
+type Profile struct {
+	gorm.Model
+
+	Psychologist 	*Psychologist `json:"psychologist"`
+	Image 			string `json:"image"`
+	Description 	string	`json:"description;"`
+}

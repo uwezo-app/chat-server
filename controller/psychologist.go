@@ -1,17 +1,23 @@
 package controller
 
 import (
+	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"text/template"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/uwezo-app/chat-server/db"
 	"golang.org/x/crypto/bcrypt"
+	gomail "gopkg.in/mail.v2"
 )
 
 // https://blog.usejournal.com/authentication-in-golang-c0677bcce1a8
@@ -96,7 +102,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 func FindOne(email, password string) (map[string]interface{}, error) {
 	user := &db.Psychologist{}
 
-	dbase.Where(&db.Psychologist{Email: email}).First(&user)
+	dbase.Where(&db.Psychologist{Email: email}).First(user)
 
 	expiresAt := time.Now().Add(time.Minute * 10080).Unix() // valid for 7 days
 
@@ -135,3 +141,77 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request){}
+
+func ResetHandler(w http.ResponseWriter, r *http.Request) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(err)
+	}
+
+	userEmail := struct {
+		Email string `json:"email"`
+	}{}
+
+	err = json.NewDecoder(r.Body).Decode(&userEmail)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(json.NewEncoder(w).Encode("Could not parse your email").Error())
+		return
+	}
+
+	var user *db.Psychologist
+	result := dbase.Where(&db.Psychologist{Email: userEmail.Email}).First(&user)
+	if result.Error != nil {
+		w.WriteHeader(http.StatusNotFound)
+		log.Println(json.NewEncoder(w).Encode("Email does not exist. Please create an account"))
+		return
+	}
+
+	from := os.Getenv("MAIL_FROM")
+	password := os.Getenv("MAIL_PASSWORD")
+	host := os.Getenv("MAIL_HOST")
+	port := os.Getenv("MAIL_PORT")
+
+	to := []string {
+		user.Email,
+	}
+
+	m := gomail.NewMessage()
+	m.SetHeaders(map[string][]string{
+		"From": {m.FormatAddress(from, "Uwezo Team")},
+		"To": to,
+		"Subject": {"Reset Password"},
+	})
+
+	t, _ := template.ParseFiles("templates/email/reset.html")
+	var body bytes.Buffer
+
+	err = t.Execute(&body, struct {
+		Name    string
+		Link string
+	}{
+		Name:    fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		Link: "https://google.com",
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	m.SetBody("text/html", string(body.Bytes()))
+
+	p, _ := strconv.Atoi(port)
+	d := gomail.NewDialer(host, p, from, password)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	if err = d.DialAndSend(m); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(json.NewEncoder(w).Encode("Could not send you a confirmation email"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	log.Println(json.NewEncoder(w).Encode("Please check your inbox for more action"))
+}

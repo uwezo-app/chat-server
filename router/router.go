@@ -13,6 +13,7 @@ func Handlers() *mux.Router {
 
 	r.HandleFunc("/register", controllers.CreatePsychologist).Methods("POST")
 	r.HandleFunc("/login", controllers.LoginHandler).Methods("POST")
+	r.HandleFunc("/reset", controllers.ResetHandler).Methods("POST")
 	r.HandleFunc("/logout", controllers.LogoutHandler).Methods("POST")
 	r.HandleFunc("/chat", controllers.ChatHandler)
 
