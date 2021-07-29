@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  postgresql:
+    restart: always
+    image: postgres
+    ports:
+      - "5432:5432"
+    secrets:
+      - postgres
+    env_file:
+      - env/postgres.env
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+    image: api:latest
+    ports:
+      - "8000:8000"
+    secrets:
+      - web
+    env_file:
+      - env/web.env
+    depends_on:
+      - postgresql
+
+secrets:
+  postgres:
+    file: env/postgres.env
+
+  web:
+    file: env/web.env
