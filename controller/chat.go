@@ -1,10 +1,10 @@
 package controller
 
 import (
-	ws "github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"time"
+
+	ws "github.com/gorilla/websocket"
 )
 
 var upgrader = ws.Upgrader{
@@ -14,6 +14,8 @@ var upgrader = ws.Upgrader{
 		return true
 	},
 }
+
+// https://github.com/gorilla/websocket/blob/master/examples/chat/client.go
 
 var poll []*ws.Conn
 
@@ -33,19 +35,16 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	poll = append(poll, conn)
 
-	go func() {
-		ct := time.Tick(5 * time.Second)
+	broadcaster := func(ch chan []byte) {
 
-		for range ct {
-			for range ch {
-				for _, c := range poll {
-					if err := c.WriteMessage(ws.TextMessage, <-ch); err != nil {
-						log.Fatal(err)
-					}
+		for range ch {
+			for _, c := range poll {
+				if err := c.WriteMessage(ws.TextMessage, <-ch); err != nil {
+					log.Fatal(err)
 				}
 			}
 		}
-	}()
+	}
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -53,5 +52,6 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 			log.Fatalf("Failure to read the message: %v", err)
 		}
 		ch <- msg
+		go broadcaster(ch)
 	}
 }
