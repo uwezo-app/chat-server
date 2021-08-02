@@ -20,7 +20,6 @@ var upgrader = ws.Upgrader{
 var poll []*ws.Conn
 
 func ChatHandler(w http.ResponseWriter, r *http.Request) {
-	ch := make(chan []byte)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal("Could upgrade the connection")
@@ -35,23 +34,18 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	poll = append(poll, conn)
 
-	broadcaster := func(ch chan []byte) {
-
-		for range ch {
-			for _, c := range poll {
-				if err := c.WriteMessage(ws.TextMessage, <-ch); err != nil {
-					log.Fatal(err)
-				}
-			}
-		}
-	}
-
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Fatalf("Failure to read the message: %v", err)
 		}
-		ch <- msg
-		go broadcaster(ch)
+
+		for _, c := range poll {
+			if c != conn {
+				if err := c.WriteMessage(ws.TextMessage, msg); err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
 	}
 }

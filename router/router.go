@@ -10,7 +10,7 @@ import (
 func Handlers() *mux.Router {
 
 	r := mux.NewRouter().StrictSlash(true)
-	// r.Use(CommonMiddleware)
+	r.Use(CommonMiddleware)
 
 	r.HandleFunc("/register", controllers.CreatePsychologist).Methods(http.MethodPost)
 	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func Handlers() *mux.Router {
 	}).Methods(http.MethodOptions)
 	r.HandleFunc("/reset", controllers.ResetHandler).Methods(http.MethodPost)
 	r.HandleFunc("/logout", controllers.LogoutHandler).Methods(http.MethodPost)
-	r.HandleFunc("/chat", controllers.ChatHandler).Methods(http.MethodGet)
+	r.HandleFunc("/chat", controllers.ChatHandler)
 
 	r.Use(mux.CORSMethodMiddleware(r))
 	// Auth route
