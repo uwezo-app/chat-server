@@ -4,27 +4,31 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	controllers "github.com/uwezo-app/chat-server/controller"
+
+	"github.com/uwezo-app/chat-server/controller"
+	"github.com/uwezo-app/chat-server/server"
 )
 
-func Handlers() *mux.Router {
+func Handlers(hub *server.Hub) *mux.Router {
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Use(CommonMiddleware)
 
-	r.HandleFunc("/register", controllers.CreatePsychologist).Methods(http.MethodPost)
+	r.HandleFunc("/register", controller.CreatePsychologist).Methods(http.MethodPost)
 	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 	}).Methods(http.MethodOptions)
-	r.HandleFunc("/login", controllers.LoginHandler).Methods(http.MethodPost)
+	r.HandleFunc("/login", controller.LoginHandler).Methods(http.MethodPost)
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 	}).Methods(http.MethodOptions)
-	r.HandleFunc("/reset", controllers.ResetHandler).Methods(http.MethodPost)
-	r.HandleFunc("/logout", controllers.LogoutHandler).Methods(http.MethodPost)
-	r.HandleFunc("/chat", controllers.ChatHandler)
+	r.HandleFunc("/reset", controller.ResetHandler).Methods(http.MethodPost)
+	r.HandleFunc("/logout", controller.LogoutHandler).Methods(http.MethodPost)
+	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+		server.ChatHandler(hub, w, r)
+	})
 
 	r.Use(mux.CORSMethodMiddleware(r))
 	// Auth route

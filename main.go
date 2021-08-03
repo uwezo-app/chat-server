@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-
-	"github.com/uwezo-app/chat-server/router"
+	"time"
 
 	"github.com/joho/godotenv"
+
+	"github.com/uwezo-app/chat-server/router"
+	"github.com/uwezo-app/chat-server/server"
 )
 
 func main() {
@@ -22,8 +24,13 @@ func main() {
 	if port == "" {
 		port = strconv.Itoa(8000)
 	}
-	r := router.Handlers()
 
-	log.Println("Starting server")
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
+	hub := server.NewHub()
+	go hub.Run()
+	r := router.Handlers(hub)
+
+	log.Printf("%v Starting server\n", time.Now())
+	if err = http.ListenAndServe(fmt.Sprintf(":%s", port), r); err != nil {
+		log.Fatalf("Could not start the server: %v\n", err)
+	}
 }
