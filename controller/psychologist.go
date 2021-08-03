@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"text/template"
 	"time"
+
+	"github.com/joho/godotenv"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/uwezo-app/chat-server/db"
@@ -32,7 +33,7 @@ var dbase = db.ConnectDB()
 // CreatePsychologist implements psychologist creation
 func CreatePsychologist(w http.ResponseWriter, r *http.Request) {
 	user := &db.Psychologist{}
-	err := json.NewDecoder(r.Body).Decode(user)
+	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		return
 	}
@@ -57,8 +58,8 @@ func CreatePsychologist(w http.ResponseWriter, r *http.Request) {
 		log.Println(rs)
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(json.NewEncoder(w).Encode(ErrorResponse{
-			Code:    	http.StatusInternalServerError,
-			Message:	"Could not create your account. Please try again later",
+			Code:    http.StatusInternalServerError,
+			Message: "Could not create your account. Please try again later",
 		}))
 	}
 	log.Printf("Row affected %v\n", rs.RowsAffected)
@@ -112,11 +113,11 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 		return nil, errors.New("username or password is incorrect")
 	}
 
-	tk := db.Token {
-		UserID: 			user.ID,
-		Name:   			fmt.Sprintf("%s %s", user.FirstName, user.LastName),
-		Email:  			user.Email,
-		StandardClaims: 	&jwt.StandardClaims{
+	tk := db.Token{
+		UserID: user.ID,
+		Name:   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		Email:  user.Email,
+		StandardClaims: &jwt.StandardClaims{
 			ExpiresAt: expiresAt,
 		},
 	}
@@ -131,16 +132,16 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 	}
 	dbase.Create(&db.TokenString{Token: tokenString, ID: user.ID})
 
-	var resp = map[string]interface{} {
-		"Code":    http.StatusOK,
-		"Token":   tokenString,
-		"User":    user,
+	var resp = map[string]interface{}{
+		"Code":  http.StatusOK,
+		"Token": tokenString,
+		"User":  user,
 	}
 
 	return resp, nil
 }
 
-func LogoutHandler(w http.ResponseWriter, r *http.Request){}
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {}
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	err := godotenv.Load()
@@ -173,14 +174,14 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	host := os.Getenv("MAIL_HOST")
 	port := os.Getenv("MAIL_PORT")
 
-	to := []string {
+	to := []string{
 		user.Email,
 	}
 
 	m := gomail.NewMessage()
 	m.SetHeaders(map[string][]string{
-		"From": {m.FormatAddress(from, "Uwezo Team")},
-		"To": to,
+		"From":    {m.FormatAddress(from, "Uwezo Team")},
+		"To":      to,
 		"Subject": {"Reset Password"},
 	})
 
@@ -188,10 +189,10 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	var body bytes.Buffer
 
 	err = t.Execute(&body, struct {
-		Name    string
+		Name string
 		Link string
 	}{
-		Name:    fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		Name: fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		Link: "https://google.com",
 	})
 	if err != nil {
@@ -199,7 +200,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.SetBody("text/html", string(body.Bytes()))
+	m.SetBody("text/html", body.String())
 
 	p, _ := strconv.Atoi(port)
 	d := gomail.NewDialer(host, p, from, password)

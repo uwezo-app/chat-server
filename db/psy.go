@@ -6,15 +6,15 @@ type Psychologist struct {
 	gorm.Model
 
 	FirstName string `json:"FirstName"`
-	LastName  string `json:"Lastname"`
+	LastName  string `json:"LastName"`
 	Email     string `gorm:"type:varchar(100);unique_index;Email"`
-	Password  string `json:"Password"`
+	Password  string `json:"password"`
 }
 
 type Profile struct {
 	gorm.Model
 
-	Psychologist 	*Psychologist `json:"psychologist"`
-	Image 			string `json:"image"`
-	Description 	string	`json:"description;"`
+	Psychologist *Psychologist `json:"Psychologist"`
+	Image        string        `json:"Image"`
+	Description  string        `json:"Description"`
 }

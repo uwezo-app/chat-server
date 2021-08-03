@@ -56,9 +56,9 @@ func getDNS() string {
 		socketDir = "/cloudsql"
 	}
 
-	user := os.Getenv("DATABASE_USER")
-	pass := os.Getenv("DATABASE_PASSWORD")
-	dbName := os.Getenv("DATABASE_NAME")
+	user := os.Getenv("GOOGLE_DB_USER")
+	pass := os.Getenv("GOOGLE_DB_PASSOWRD")
+	dbName := os.Getenv("GOOGLE_DB_NAME")
 	//dbHost := os.Getenv("DATABASE_HOST")
 	instanceConnectionName := os.Getenv("INSTANCE_CONNECTION_NAME")
 
