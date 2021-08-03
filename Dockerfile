@@ -29,4 +29,6 @@ COPY --chown=0:0 --from=build $APP_HOME/chat-server $APP_HOME
 
 USER $APP_USER
 
+EXPOSE 8080
+
 CMD ["./chat-server"]
