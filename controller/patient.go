@@ -30,8 +30,8 @@ func PatientLoginHandler(w http.ResponseWriter, r *http.Request) {
 	user := &db.Patient{}
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
-		var errorResponse = ErrorResponse {
-			Code: http.StatusInternalServerError,
+		var errorResponse = ErrorResponse{
+			Code:    http.StatusInternalServerError,
 			Message: "Could not decode your request",
 		}
 		_ = json.NewEncoder(w).Encode(errorResponse)

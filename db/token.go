@@ -1,28 +1,29 @@
 package db
 
 import (
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/gorm"
 )
 
-type Token struct {
-	*jwt.StandardClaims
+type CustomClaims struct {
+	UserID uint
+	Name   string
+	Email  string
 
-	UserID		uint
-	Name        string
-	Email       string
+	jwt.StandardClaims
 }
 
-type TokenString struct {
+type Token struct {
 	gorm.Model
 
-	ID			uint 	`gorm:"primarykey"`
-	Token       string 	`json:"Token"`
+	UserID string `gorm:"primaryKey"`
+	Token  string `json:"CustomClaims"`
 }
 
-func (t Token) Valid() error {
-	// Check if the token is expired
-	// Check if the token has been revoked
-	// by checking if the token matches the db entry
-	panic("implement me")
-}
+//
+//func (t CustomClaims) Valid() error {
+//	// Check if the token is expired
+//	// Check if the token has been revoked
+//	// by checking if the token matches the db entry
+//	panic("implement me")
+//}

@@ -7,14 +7,16 @@ type Psychologist struct {
 
 	FirstName string `json:"FirstName"`
 	LastName  string `json:"LastName"`
-	Email     string `gorm:"type:varchar(100);unique_index;Email"`
+	Email     string `gorm:"primaryKey;autoIncrement:false"`
 	Password  string `json:"password"`
+
+	Profile Profile `gorm:"foreignKey:Psychologist"`
 }
 
 type Profile struct {
 	gorm.Model
 
-	Psychologist *Psychologist `json:"Psychologist"`
-	Image        string        `json:"Image"`
-	Description  string        `json:"Description"`
+	Psychologist string `gorm:"primaryKey"`
+	Image        string `json:"Image"`
+	Description  string `json:"Description"`
 }

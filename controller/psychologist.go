@@ -13,12 +13,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/uwezo-app/chat-server/db"
 	"golang.org/x/crypto/bcrypt"
-	gomail "gopkg.in/mail.v2"
+	"gopkg.in/mail.v2"
+
+	"github.com/uwezo-app/chat-server/db"
 )
 
 // https://blog.usejournal.com/authentication-in-golang-c0677bcce1a8
@@ -79,7 +79,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		errorResponse := ErrorResponse{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("An error occurred while processing your request: %s", err),
+			Message: fmt.Sprintln("An error occurred while processing your request"),
 		}
 		log.Println(json.NewEncoder(w).Encode(errorResponse))
 		return
@@ -101,11 +101,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func FindOne(email, password string) (map[string]interface{}, error) {
-	user := &db.Psychologist{}
+	var user *db.Psychologist
 
-	dbase.Where(&db.Psychologist{Email: email}).First(user)
+	dbase.Where(&db.Psychologist{Email: email}).First(&user)
 
-	expiresAt := time.Now().Add(time.Minute * 10080).Unix() // valid for 7 days
+	expiresAt := time.Now().Add(time.Hour * 168).Unix() // valid for 7 days
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
@@ -113,16 +113,16 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 		return nil, errors.New("username or password is incorrect")
 	}
 
-	tk := db.Token{
+	claims := db.CustomClaims{
 		UserID: user.ID,
 		Name:   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		Email:  user.Email,
-		StandardClaims: &jwt.StandardClaims{
+		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiresAt,
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), tk)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 
 	var tokenString string
 	tokenString, err = token.SignedString([]byte(os.Getenv("SECRET")))
@@ -130,7 +130,7 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 		log.Println(err)
 		return nil, err
 	}
-	dbase.Create(&db.TokenString{Token: tokenString, ID: user.ID})
+	dbase.Create(&db.Token{Token: tokenString, UserID: user.Email})
 
 	var resp = map[string]interface{}{
 		"Code":  http.StatusOK,
@@ -141,7 +141,7 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 	return resp, nil
 }
 
-func LogoutHandler(w http.ResponseWriter, r *http.Request) {}
+func LogoutHandler(_ http.ResponseWriter, _ *http.Request) {}
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	err := godotenv.Load()
@@ -178,7 +178,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		user.Email,
 	}
 
-	m := gomail.NewMessage()
+	m := mail.NewMessage()
 	m.SetHeaders(map[string][]string{
 		"From":    {m.FormatAddress(from, "Uwezo Team")},
 		"To":      to,
@@ -203,7 +203,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	m.SetBody("text/html", body.String())
 
 	p, _ := strconv.Atoi(port)
-	d := gomail.NewDialer(host, p, from, password)
+	d := mail.NewDialer(host, p, from, password)
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	if err = d.DialAndSend(m); err != nil {

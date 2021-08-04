@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/uwezo-app/chat-server/db"
 )
 
@@ -24,7 +24,7 @@ func VerifyJWT(next http.Handler) http.Handler {
 				Message string
 			}{
 				Code:    http.StatusForbidden,
-				Message: "Missing Auth Token",
+				Message: "Missing Auth CustomClaims",
 			})
 			if err != nil {
 				return
@@ -32,7 +32,7 @@ func VerifyJWT(next http.Handler) http.Handler {
 			return
 		}
 
-		tk := &db.Token{}
+		tk := &db.CustomClaims{}
 
 		_, err := jwt.ParseWithClaims(accessToken, tk, func(token *jwt.Token) (interface{}, error) {
 			return []byte("secret"), nil
@@ -44,7 +44,7 @@ func VerifyJWT(next http.Handler) http.Handler {
 				Message string
 			}{
 				Code:    http.StatusForbidden,
-				Message: "Missing Auth Token",
+				Message: "Missing Auth CustomClaims",
 			})
 			return
 		}
