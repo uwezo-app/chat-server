@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/golang-jwt/jwt/v4"
-	"gorm.io/gorm"
 )
 
 type CustomClaims struct {
@@ -11,13 +10,6 @@ type CustomClaims struct {
 	Email  string
 
 	jwt.StandardClaims
-}
-
-type Token struct {
-	gorm.Model
-
-	UserID string `gorm:"primaryKey"`
-	Token  string `json:"CustomClaims"`
 }
 
 //

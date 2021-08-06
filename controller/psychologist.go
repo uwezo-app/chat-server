@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -28,10 +29,8 @@ type ErrorResponse struct {
 	Message string
 }
 
-var dbase = db.ConnectDB()
-
 // CreatePsychologist implements psychologist creation
-func CreatePsychologist(w http.ResponseWriter, r *http.Request) {
+func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	user := &db.Psychologist{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -62,13 +61,12 @@ func CreatePsychologist(w http.ResponseWriter, r *http.Request) {
 			Message: "Could not create your account. Please try again later",
 		}))
 	}
-	log.Printf("Row affected %v\n", rs.RowsAffected)
 
 	log.Println(json.NewEncoder(w).Encode(user))
 }
 
 // LoginHandler implements authentication for psychologists
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+func LoginHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var user = &db.Psychologist{}
 	var resp = make(map[string]interface{})
 	var err error
@@ -85,7 +83,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err = FindOne(user.Email, user.Password)
+	resp, err = FindOne(dbase, user.Email, user.Password)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusNotFound)
@@ -100,7 +98,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(json.NewEncoder(w).Encode(resp))
 }
 
-func FindOne(email, password string) (map[string]interface{}, error) {
+func FindOne(dbase *gorm.DB, email, password string) (map[string]interface{}, error) {
 	var user *db.Psychologist
 
 	dbase.Where(&db.Psychologist{Email: email}).First(&user)
@@ -130,7 +128,6 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 		log.Println(err)
 		return nil, err
 	}
-	dbase.Create(&db.Token{Token: tokenString, UserID: user.Email})
 
 	var resp = map[string]interface{}{
 		"Code":  http.StatusOK,
@@ -143,7 +140,7 @@ func FindOne(email, password string) (map[string]interface{}, error) {
 
 func LogoutHandler(_ http.ResponseWriter, _ *http.Request) {}
 
-func ResetHandler(w http.ResponseWriter, r *http.Request) {
+func ResetHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Println(err)

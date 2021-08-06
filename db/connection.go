@@ -29,7 +29,7 @@ func ConnectDB() *gorm.DB {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&Psychologist{}, &Token{})
+	err = db.AutoMigrate(&Psychologist{})
 	if err != nil {
 		log.Fatalf("Could not run migrations: %v\n", err)
 	}

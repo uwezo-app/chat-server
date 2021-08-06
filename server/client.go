@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +20,9 @@ type Chat struct {
 	Flag string `json:"flag"`
 
 	// the receiving party on a targeted Message
-	RecipientID string `json:"recipient"`
+	RecipientID uint `json:"recipient"`
+
+	ConversationID uint
 
 	Message string `json:"message"`
 }
@@ -53,6 +56,8 @@ var upgrader = ws.Upgrader{
 
 // Client stands between the hub and the ws connections
 type Client struct {
+	ClientID uint
+
 	hub *Hub
 
 	// Websockets connection
@@ -60,6 +65,9 @@ type Client struct {
 
 	// Buffered channel for the outgoing messages
 	send chan []byte
+
+	// Notification channel
+	notify chan []byte
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -67,7 +75,7 @@ type Client struct {
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (c *Client) readPump(conn *ConnectionDetail) {
+func (c *Client) readPump(dbase *gorm.DB, conn *db.ConnectedClient) {
 	defer func() {
 		c.hub.unregister <- conn
 		log.Println(c.conn.Close())
@@ -94,11 +102,14 @@ func (c *Client) readPump(conn *ConnectionDetail) {
 		if chat.Flag == "broadcast" {
 			c.hub.broadcast <- chatMessage
 		} else if chat.Flag == "targeted" {
-			userConn, ok := c.hub.connections[chat.RecipientID]
-			if ok {
+			var userConn *db.ConnectedClient
+			res := dbase.Find(&userConn, &db.ConnectedClient{UserID: chat.RecipientID})
+			if res.Error == nil {
 				message := &Message{
-					to:      userConn.client,
+					to:      userConn.Client,
+					from:    c,
 					message: chatMessage,
+					conversationID: chat.ConversationID,
 				}
 				c.hub.targeted <- message
 			}
@@ -150,6 +161,10 @@ func (c *Client) writePump() {
 				log.Printf("Error: %v\n", err)
 				return
 			}
+
+		case message := <-c.notify:
+			log.Println(c.conn.WriteMessage(ws.CloseTryAgainLater, message))
+
 		case <-ticker.C:
 			log.Println(c.conn.SetWriteDeadline(time.Now().Add(writeWait)))
 			if err := c.conn.WriteMessage(ws.PingMessage, nil); err != nil {
@@ -160,19 +175,15 @@ func (c *Client) writePump() {
 }
 
 // ChatHandler handles websocket requests from the peer.
-func ChatHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Could upgrade the connection: %v\n", err)
-		return
-	}
-
-	tokenString := r.URL.Query().Get("tokenString")
+func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	var err error
 	var tk *jwt.Token
+	tokenString := r.URL.Query().Get("tokenString")
 	tk, err = jwt.ParseWithClaims(tokenString, &db.CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("SECRET")), nil
 	})
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
@@ -184,17 +195,24 @@ func ChatHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	send := make(chan []byte)
-	client := &Client{hub, conn, send}
-	userConn := &ConnectionDetail{
-		user:     claims.Name,
-		client:   client,
-		lastSeen: time.Now(),
+	var conn *ws.Conn
+	conn, err = upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Could upgrade the connection: %v\n", err)
+		return
+	}
+
+	send, notify := make(chan []byte), make(chan []byte)
+	client := &Client{claims.UserID, hub, conn, send, notify}
+	userConn := &db.ConnectedClient{
+		UserID:   claims.UserID,
+		Client:   client,
+		LastSeen: time.Now(),
 	}
 	client.hub.register <- userConn
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
 	go client.writePump()
-	go client.readPump(userConn)
+	go client.readPump(dbase, userConn)
 }

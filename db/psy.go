@@ -10,13 +10,14 @@ type Psychologist struct {
 	Email     string `gorm:"primaryKey;autoIncrement:false"`
 	Password  string `json:"password"`
 
+	PairedUsers []PairedUsers `gorm:"foreignKey:PsychologistID"`
 	Profile Profile `gorm:"foreignKey:Psychologist"`
 }
 
 type Profile struct {
 	gorm.Model
 
-	Psychologist string `gorm:"primaryKey"`
+	Psychologist uint `gorm:"primaryKey"`
 	Image        string `json:"Image"`
 	Description  string `json:"Description"`
 }

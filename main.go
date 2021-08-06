@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/uwezo-app/chat-server/db"
 	"log"
 	"net/http"
 	"os"
@@ -25,9 +26,11 @@ func main() {
 		port = strconv.Itoa(8000)
 	}
 
+	var dbase = db.ConnectDB()
+
 	hub := server.NewHub()
-	go hub.Run()
-	r := router.Handlers(hub)
+	go hub.Run(dbase)
+	r := router.Handlers(hub, dbase)
 
 	log.Printf("%v Starting server\n", time.Now())
 	if err = http.ListenAndServe(fmt.Sprintf(":%s", port), r); err != nil {

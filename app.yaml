@@ -15,11 +15,13 @@ env_variables:
   INSTANCE_CONNECTION_NAME: uwezoapp-321219:asia-south1:uwezoapp-db
   APP_ENV: production
   SECRET: J-jgSxotNE1wcWGa2LV_D6wQs4cGMvVkWnATJq_yFkbyzlWoqHDN-b9iH-3aH-NQuJQHawJkdm5VbqePpORR-DjICaO0tI9SQ5IRipwklPRZW
+
 # Use only a single instance, so that this local-memory-only chat app will work
 # consistently with multiple users. To work across multiple instances, an
 # extra-instance messaging system or data store would be needed.
-# manual_scaling:
-#   instances: 1
+manual_scaling:
+  instances: 1
+
 # For applications which can take advantage of session affinity
 # (where the load balancer will attempt to route multiple connections from
 # the same user to the same App Engine instance), uncomment the folowing:
