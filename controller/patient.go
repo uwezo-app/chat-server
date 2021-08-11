@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/uwezo-app/chat-server/db"
+	"github.com/uwezo-app/chat-server/utils"
 )
 
 // CreatePatient an implementation of patient's creation
@@ -30,7 +31,7 @@ func PatientLoginHandler(w http.ResponseWriter, r *http.Request) {
 	user := &db.Patient{}
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
-		var errorResponse = ErrorResponse{
+		var errorResponse = utils.ErrorResponse{
 			Code:    http.StatusInternalServerError,
 			Message: "Could not decode your request",
 		}

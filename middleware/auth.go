@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -35,7 +36,7 @@ func VerifyJWT(next http.Handler) http.Handler {
 		tk := &db.CustomClaims{}
 
 		_, err := jwt.ParseWithClaims(accessToken, tk, func(token *jwt.Token) (interface{}, error) {
-			return []byte("secret"), nil
+			return []byte(os.Getenv("SECRET")), nil
 		})
 
 		if err != nil {
@@ -49,7 +50,7 @@ func VerifyJWT(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), Key("user"), tk)
+		ctx := context.WithValue(r.Context(), Key("USER"), tk)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

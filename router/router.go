@@ -1,8 +1,9 @@
 package router
 
 import (
-	"gorm.io/gorm"
 	"net/http"
+
+	"gorm.io/gorm"
 
 	"github.com/gorilla/mux"
 
@@ -32,7 +33,22 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 	r.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		controller.ResetHandler(dbase, w, r)
 	}).Methods(http.MethodPost)
-	r.HandleFunc("/logout", controller.LogoutHandler).Methods(http.MethodPost)
+	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		controller.LogoutHandler(dbase, w, r)
+	}).Methods(http.MethodPost)
+
+	r.HandleFunc("/psychologist/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
+		controller.UpdateProfileHandler(dbase, w, r)
+	}).Methods(http.MethodPost)
+	r.HandleFunc("/psychologist/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetProfileHandler(dbase, w, r)
+	}).Methods(http.MethodGet)
+
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+	}).Methods(http.MethodOptions)
+
 	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		server.ChatHandler(hub, dbase, w, r)
 	})

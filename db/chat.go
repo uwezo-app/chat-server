@@ -3,20 +3,8 @@ package db
 import (
 	"time"
 
-	"github.com/uwezo-app/chat-server/server"
 	"gorm.io/gorm"
 )
-
-// ConnectedClient holds the connection info of a specific client
-type ConnectedClient struct {
-	gorm.Model
-
-	UserID uint `gorm:"primaryKey"`
-
-	Client *server.Client `gorm:"embedded"`
-
-	LastSeen time.Time
-}
 
 type PairedUsers struct {
 	gorm.Model
@@ -27,7 +15,7 @@ type PairedUsers struct {
 
 	Conversation []Conversation `gorm:"foreignKey:ConversationID"`
 
-	EncryptionID string
+	EncryptionKey string
 
 	PairedAt time.Time
 }

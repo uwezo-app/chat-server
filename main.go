@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/uwezo-app/chat-server/db"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
+
+	"github.com/uwezo-app/chat-server/db"
 
 	"github.com/joho/godotenv"
 
@@ -32,7 +32,7 @@ func main() {
 	go hub.Run(dbase)
 	r := router.Handlers(hub, dbase)
 
-	log.Printf("%v Starting server\n", time.Now())
+	log.Printf("Starting server on port: %v\n", port)
 	if err = http.ListenAndServe(fmt.Sprintf(":%s", port), r); err != nil {
 		log.Fatalf("Could not start the server: %v\n", err)
 	}

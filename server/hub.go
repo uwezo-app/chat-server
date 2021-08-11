@@ -2,45 +2,53 @@ package server
 
 import (
 	"fmt"
-	"github.com/uwezo-app/chat-server/db"
-	"gorm.io/gorm"
-	"log"
 	"time"
+
+	"gorm.io/gorm"
+
+	"github.com/uwezo-app/chat-server/db"
 )
 
 type Message struct {
-	to, from *Client
+	to, from       *Client
 	conversationID uint
-	message  []byte
+	message        []byte
 }
 
 // Hub maintains active connections and broadcast messages
 // to connections
 type Hub struct {
+	Connections map[uint]*ConnectedClient
+
 	// Incoming messages from a client
 	// to all connections subscribers of a channel
-	broadcast chan []byte
+	Broadcast chan []byte
 
 	// Incoming messages for a specific client
-	targeted chan *Message
+	Targeted chan *Message
+
+	// returns connected users
+	GetUsers chan *Client
 
 	// Register client's requests
-	register chan *db.ConnectedClient
+	Register chan *ConnectedClient
 
 	// connects two peers
-	pair chan *db.PairedUsers
+	Pair chan *db.PairedUsers
 
 	// Unregister requests from the connections
-	unregister chan *db.ConnectedClient
+	Unregister chan *ConnectedClient
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
-		targeted:   make(chan *Message),
-		register:   make(chan *db.ConnectedClient),
-		pair:       make(chan *db.PairedUsers),
-		unregister: make(chan *db.ConnectedClient),
+		Broadcast:   make(chan []byte),
+		Targeted:    make(chan *Message),
+		Register:    make(chan *ConnectedClient),
+		Pair:        make(chan *db.PairedUsers),
+		Unregister:  make(chan *ConnectedClient),
+		Connections: make(map[uint]*ConnectedClient),
+		GetUsers:    make(chan *Client),
 	}
 }
 
@@ -50,31 +58,22 @@ func (h *Hub) Run(dbase *gorm.DB) {
 
 	for {
 		select {
-		case c := <-h.register:
-			conn := db.ConnectedClient{
+		case c := <-h.Register:
+			conn := ConnectedClient{
 				UserID:   c.UserID,
 				Client:   c.Client,
 				LastSeen: c.LastSeen,
 			}
-			res := dbase.Create(&conn)
-			if res.Error != nil {
-				c.Client.notify <- []byte("connection closed")
-				log.Println(c.Client.conn.Close())
-				return
+			h.Connections[c.UserID] = &conn
+
+		case c := <-h.Unregister:
+			if _, ok := h.Connections[c.UserID]; ok {
+				close(c.Client.Send)
+				close(c.Client.Notify)
+				_ = c.Client.Conn.Close()
 			}
 
-		case c := <-h.unregister:
-			res := dbase.Where(&db.ConnectedClient{UserID: c.UserID}).Delete(&db.ConnectedClient{})
-			if res.Error != nil {
-				c.Client.notify <- []byte("could not close connection")
-				return
-			}
-
-			close(c.Client.send)
-			close(c.Client.notify)
-			log.Println(c.Client.conn.Close())
-
-		case _ = <-h.broadcast:
+		case <-h.Broadcast:
 		//	for c := range h.connections {
 		//		select {
 		//		case h.connections[c].Client.send <- msg:
@@ -84,38 +83,58 @@ func (h *Hub) Run(dbase *gorm.DB) {
 		//		}
 		//	}
 
-		case pairReq := <-h.pair:
-			res := dbase.Create(pairReq)
+		case c := <-h.GetUsers:
+			c.SendJSON <- &struct {
+				Users []interface{} `json:"users"`
+			}{
+				Users: func() []interface{} {
+					type user struct {
+						ID   uint   `json:"id"`
+						Name string `json:"name"`
+					}
+					users := make([]interface{}, 0)
+					for _, c := range h.Connections {
+						user_ := &user{
+							ID:   c.UserID,
+							Name: c.Client.Name,
+						}
+						users = append(users, user_)
+					}
+					return users
+				}(),
+			}
+
+		case pairReq := <-h.Pair:
+			res := dbase.Create(&pairReq)
 			if res.Error != nil {
 				return
 			}
 
 			// Notify the users of the connection
-			var patient, psy *db.ConnectedClient
-			dbase.Find(&patient, &db.ConnectedClient{UserID: pairReq.PatientID})
-			dbase.Find(&psy, &db.ConnectedClient{UserID: pairReq.PsychologistID})
-			patient.Client.notify <- []byte(fmt.Sprintf("Connected to %v", psy.UserID))
-			psy.Client.notify <- []byte(fmt.Sprintf("Connected to %v", patient.UserID))
+			patient := h.Connections[pairReq.PatientID]
+			psy := h.Connections[pairReq.PsychologistID]
+			patient.Client.Send <- []byte(fmt.Sprintf("ConversationID %v", pairReq.ID))
+			psy.Client.Send <- []byte(fmt.Sprintf("ConversationID %v", pairReq.ID))
 
-		case tMessage := <-h.targeted:
+		case tMessage := <-h.Targeted:
 			select {
 			// if the channel is read to receive, send the message then
 			// break out of the loop
-			case tMessage.to.send <- tMessage.message:
-				dbase.Create(db.Conversation{
+			case tMessage.to.Send <- tMessage.message:
+				dbase.Create(&db.Conversation{
 					ConversationID: tMessage.conversationID,
 					From:           tMessage.from.ClientID,
 					Message:        string(tMessage.message),
 					SentAt:         time.Now(),
 				})
-				tMessage.from.send <- tMessage.message
+				tMessage.from.Send <- tMessage.message
 			// the default case is when the client's channel is not ready to
 			// receive, which means that they are not connected
 			default:
 				// This is where we could save the message into
 				// the database so that when client tMessage.to is
 				// back online, we send them
-				close(tMessage.to.send)
+				close(tMessage.to.Send)
 				//delete(h.connections, tMessage.to)
 			}
 		}
