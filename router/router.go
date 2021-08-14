@@ -26,23 +26,49 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		controller.LoginHandler(dbase, w, r)
 	}).Methods(http.MethodPost)
+
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 	}).Methods(http.MethodOptions)
+
 	r.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		controller.ResetHandler(dbase, w, r)
 	}).Methods(http.MethodPost)
+
 	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		controller.LogoutHandler(dbase, w, r)
-	}).Methods(http.MethodPost)
-
-	r.HandleFunc("/psychologist/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
-		controller.UpdateProfileHandler(dbase, w, r)
-	}).Methods(http.MethodPost)
-	r.HandleFunc("/psychologist/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
-		controller.GetProfileHandler(dbase, w, r)
 	}).Methods(http.MethodGet)
+	r.HandleFunc("/psychologists/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			controller.GetProfileHandler(dbase, w, r)
+		} else if r.Method == http.MethodPost {
+			controller.UpdateProfileHandler(dbase, w, r)
+		} else if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		}
+	}).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
+
+	/**
+	=================
+		METRICS
+	=================
+	*/
+	r.HandleFunc("/psychologists", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetPsychologists(dbase, w, r)
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/psychologists/number", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetNumberofPsychologists(dbase, w, r)
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/patients/number", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetNumberofPatients(dbase, w, r)
+	}).Methods(http.MethodGet)
+	/**
+	=================
+		END METRICS
+	=================
+	*/
 
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

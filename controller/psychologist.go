@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -68,7 +69,7 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 	}
 
 	go func(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, writer *bytes.Buffer) {
-		err := utils.SendEmail(dbase, email, "templates/email/reset.html", body, writer)
+		err := utils.SendEmail(dbase, email, HTMLtemp, body, writer)
 		if err != nil {
 			log.Println(err)
 			json.NewEncoder(w).Encode(err.Error())
@@ -139,28 +140,49 @@ func FindOne(dbase *gorm.DB, email, password string) (map[string]interface{}, er
 }
 
 func UpdateProfileHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	email := mux.Vars(r)["Email"]
+	// email := mux.Vars(r)["Email"]
 	var newProfile = &db.Psychologist{}
-	var psy = &db.Psychologist{}
-	var profile = &db.Profile{}
 
 	utils.DecodeRequestBody(w, r, &newProfile)
 
-	dbase.Find(&psy, &db.Psychologist{Email: email})
-	dbase.Model(&psy).Updates(newProfile)
+	result := dbase.Session(&gorm.Session{FullSaveAssociations: true}).Save(&newProfile)
+	if result.Error != nil {
+		log.Println(result)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(json.NewEncoder(w).Encode(utils.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Could not update your profile. Please try again later",
+		}))
+		return
+	}
 
-	dbase.Find(&psy, &db.Profile{Psychologist: psy.ID})
-	dbase.Model(&profile).Updates(newProfile.Profile)
+	var writer bytes.Buffer
+	body := struct {
+		Name  string
+		Email string
+	}{
+		Name:  fmt.Sprintf("%s %s", newProfile.FirstName, newProfile.LastName),
+		Email: "security@uwezo.app",
+	}
+
+	go func(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, writer *bytes.Buffer) {
+		err := utils.SendEmail(dbase, email, HTMLtemp, body, writer)
+		if err != nil {
+			log.Println(err)
+			json.NewEncoder(w).Encode(err.Error())
+			return
+		}
+	}(dbase, newProfile.Email, "templates/email/profile.html", &body, &writer)
 
 	w.WriteHeader(http.StatusOK)
-	log.Println(json.NewEncoder(w).Encode(psy))
+	log.Println(json.NewEncoder(w).Encode(newProfile))
 }
 
 func GetProfileHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	email := mux.Vars(r)["Email"]
 	var profile = &db.Psychologist{}
 
-	result := dbase.Find(&profile, &db.Psychologist{Email: email})
+	result := dbase.First(&profile, db.Psychologist{Email: email})
 	if result.Error != nil {
 		log.Println(result)
 		w.WriteHeader(http.StatusNotFound)
@@ -173,6 +195,27 @@ func GetProfileHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	log.Println(json.NewEncoder(w).Encode(profile))
+}
+
+func GetPsychologists(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	queries := r.URL.Query()
+	var psychologists = []db.Psychologist{}
+	if limit := queries.Get("limit"); limit != "" {
+		l, _ := strconv.Atoi(limit)
+		dbase.Limit(l).Find(&psychologists)
+	} else if order_by := queries.Get("order_by"); order_by != "" {
+		var limit string
+		if limit = queries.Get("limit"); limit == "" {
+			limit = "5"
+		}
+		l, _ := strconv.Atoi(limit)
+		dbase.Order(order_by + " desc").Limit(l).Find(&psychologists)
+	} else {
+		dbase.Find(&psychologists)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	log.Println(json.NewEncoder(w).Encode(psychologists))
 }
 
 func UpdatePassword(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -209,17 +252,44 @@ func LogoutHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var user *db.Psychologist
+	dbase.Where(&db.Psychologist{Email: claims.Email}).First(&user)
+	if user == nil {
+		log.Println("User not found")
+		w.WriteHeader(http.StatusNotFound)
+		log.Println(json.NewEncoder(w).Encode(utils.ErrorResponse{
+			Code:    http.StatusNotFound,
+			Message: "User not found",
+		}))
+		return
+	}
+
+	// Invalidate user token
+	tokenString, err = utils.GenerateToken(user, 0)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(json.NewEncoder(w).Encode(utils.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}))
+		return
+	}
+
 	// remove the token from the client
 	var conn *server.ConnectedClient
 	result := dbase.Find(&conn, &server.ConnectedClient{UserID: claims.UserID})
 	if result.Error != nil {
 		log.Println(result.Error)
+		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode("Your session has expired")
 		return
 	}
 
 	conn.Client.Hub.Unregister <- conn
-	json.NewEncoder(w).Encode("You have been logged out")
+
+	w.WriteHeader(http.StatusNotFound)
+	log.Println(json.NewEncoder(w).Encode(tokenString))
 }
 
 func ResetHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -258,7 +328,7 @@ func ResetHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, writer *bytes.Buffer) {
-		err := utils.SendEmail(dbase, email, "templates/email/reset.html", body, writer)
+		err := utils.SendEmail(dbase, email, HTMLtemp, body, writer)
 		if err != nil {
 			log.Println(err)
 			json.NewEncoder(w).Encode(err.Error())

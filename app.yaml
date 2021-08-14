@@ -16,6 +16,12 @@ env_variables:
   APP_ENV: production
   SECRET: J-jgSxotNE1wcWGa2LV_D6wQs4cGMvVkWnATJq_yFkbyzlWoqHDN-b9iH-3aH-NQuJQHawJkdm5VbqePpORR-DjICaO0tI9SQ5IRipwklPRZW
 
+  # Email information
+  MAIL_FROM: makutanolucien@gmail.com
+  MAIL_PASSWORD: 1221lucien
+  MAIL_HOST: smtp.gmail.com
+  MAIL_PORT: 587
+
 # Use only a single instance, so that this local-memory-only chat app will work
 # consistently with multiple users. To work across multiple instances, an
 # extra-instance messaging system or data store would be needed.
