@@ -31,10 +31,7 @@ func ConnectDB() *gorm.DB {
 	// Migrate the schema
 	err = db.AutoMigrate(
 		&Psychologist{},
-		&Profile{},
 		&Patient{},
-		&PairedUsers{},
-		&Conversation{},
 	)
 
 	if err != nil {
