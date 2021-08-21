@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"crypto/tls"
-	"errors"
 	"html/template"
 	"os"
 	"strconv"
@@ -12,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SendEmail(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, writer bytes.Buffer) error {
+func SendEmail(dbase *gorm.DB, email string, subject string, HTMLtemp string, body interface{}) error {
 	// var user *db.Psychologist
 
 	from := os.Getenv("MAIL_FROM")
@@ -28,10 +27,11 @@ func SendEmail(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, 
 	m.SetHeaders(map[string][]string{
 		"From":    {m.FormatAddress(from, "Uwezo Team")},
 		"To":      to,
-		"Subject": {"Reset Password"},
+		"Subject": {subject},
 	})
 
 	t, _ := template.ParseFiles(HTMLtemp)
+	var writer bytes.Buffer
 
 	err := t.Execute(&writer, body)
 	if err != nil {
@@ -45,7 +45,7 @@ func SendEmail(dbase *gorm.DB, email string, HTMLtemp string, body interface{}, 
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	if err = d.DialAndSend(m); err != nil {
-		return errors.New("could not send you an email")
+		return err
 	}
 
 	return nil

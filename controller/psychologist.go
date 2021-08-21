@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,7 +58,6 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 		}))
 	}
 
-	var writer bytes.Buffer
 	body := struct {
 		Name string
 		Link string
@@ -68,15 +66,16 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 		Link: "https://google.com",
 	}
 
-	go func(dbase *gorm.DB, email string, HTMLTemp string, body interface{}, writer bytes.Buffer) {
-		err := utils.SendEmail(dbase, email, HTMLTemp, body, writer)
+	go func(dbase *gorm.DB, email string, subject string, HTMLTemp string, body interface{}) {
+		err := utils.SendEmail(dbase, email, subject, HTMLTemp, body)
 		if err != nil {
 			log.Println(err)
 			_ = json.NewEncoder(w).Encode(err.Error())
 			return
 		}
-	}(dbase, user.Email, "templates/email/confirm.html", body, writer)
+	}(dbase, user.Email, "Welcome", "templates/email/confirm.html", body)
 
+	w.WriteHeader(http.StatusCreated)
 	log.Println(json.NewEncoder(w).Encode(user))
 }
 
@@ -86,7 +85,7 @@ func LoginHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var resp map[string]interface{}
 	var err error
 
-	err = json.NewDecoder(r.Body).Decode(user)
+	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -116,7 +115,11 @@ func LoginHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 func FindOne(dbase *gorm.DB, email, password string) (map[string]interface{}, error) {
 	var user *db.Psychologist
 
-	dbase.Where(db.Psychologist{Email: email}).First(user)
+	result := dbase.Where(db.Psychologist{Email: email}).First(&user)
+	if result.Error != nil {
+		log.Println(result)
+		return nil, errors.New("user not found")
+	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
@@ -156,7 +159,6 @@ func UpdateProfileHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var writer bytes.Buffer
 	body := struct {
 		Name  string
 		Email string
@@ -165,14 +167,14 @@ func UpdateProfileHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request
 		Email: "security@uwezo.app",
 	}
 
-	go func(dbase *gorm.DB, email string, HTMLTemp string, body interface{}, writer bytes.Buffer) {
-		err := utils.SendEmail(dbase, email, HTMLTemp, body, writer)
+	go func(dbase *gorm.DB, email string, subject string, HTMLTemp string, body interface{}) {
+		err := utils.SendEmail(dbase, email, subject, HTMLTemp, body)
 		if err != nil {
 			log.Println(err)
 			_ = json.NewEncoder(w).Encode(err.Error())
 			return
 		}
-	}(dbase, newProfile.Email, "templates/email/profile.html", body, writer)
+	}(dbase, newProfile.Email, "Profile update", "templates/email/profile.html", body)
 
 	w.WriteHeader(http.StatusOK)
 	log.Println(json.NewEncoder(w).Encode(newProfile))
@@ -324,7 +326,6 @@ func ResetHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var writer bytes.Buffer
 	body := struct {
 		Name string
 		Link string
@@ -333,14 +334,14 @@ func ResetHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		Link: fmt.Sprintf("https://google.com?email=%s", user.Email),
 	}
 
-	go func(dbase *gorm.DB, email string, HTMLTemp string, body interface{}, writer bytes.Buffer) {
-		err := utils.SendEmail(dbase, email, HTMLTemp, body, writer)
+	go func(dbase *gorm.DB, email string, subject string, HTMLTemp string, body interface{}) {
+		err := utils.SendEmail(dbase, email, subject, HTMLTemp, body)
 		if err != nil {
 			log.Println(err)
 			_ = json.NewEncoder(w).Encode(err.Error())
 			return
 		}
-	}(dbase, userEmail.Email, "templates/email/reset.html", &body, writer)
+	}(dbase, userEmail.Email, "Reset Password", "templates/email/reset.html", body)
 
 	w.WriteHeader(http.StatusOK)
 	log.Println(json.NewEncoder(w).Encode("Please check your inbox for more action"))

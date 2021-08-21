@@ -28,15 +28,10 @@ func ConnectDB() *gorm.DB {
 		log.Fatalf("Could not connect to database %v\n", err)
 	}
 
-	// Migrate the schema
-	err = db.AutoMigrate(
-		&Psychologist{},
-		&Patient{},
-	)
+	tables := []interface{}{&Psychologist{}, &Patient{}}
 
-	if err != nil {
-		log.Fatalf("Could not run migrations: %v\n", err)
-	}
+	// Migrate the schema
+	db.Migrator().AutoMigrate(tables...)
 
 	log.Printf("Successfully connected! %v\n", dns)
 	return db
