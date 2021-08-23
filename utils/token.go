@@ -22,6 +22,30 @@ func GenerateToken(user *db.Psychologist, expiresAt int64) (token string, err er
 		UserID: user.ID,
 		Name:   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		Email:  user.Email,
+		Role:   "Psychologist",
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expiresAt,
+		},
+	}
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+
+	var tokenString string
+	tokenString, err = t.SignedString([]byte(os.Getenv("SECRET")))
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func GenerateAdminToken(user *db.Admin, expiresAt int64) (token string, err error) {
+	claims := db.CustomClaims{
+		UserID: user.ID,
+		Name:   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		Email:  user.Email,
+		Role:   "admin",
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiresAt,
 		},
@@ -43,6 +67,7 @@ func GeneratePatientToken(user *db.Patient, expiresAt int64) (token string, err 
 	claims := db.CustomClaims{
 		UserID: user.ID,
 		Name:   user.NickName,
+		Role:   "patient",
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiresAt,
 		},

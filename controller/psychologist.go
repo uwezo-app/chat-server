@@ -56,6 +56,7 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 			Code:    http.StatusInternalServerError,
 			Message: "Could not create your account. Please try again later",
 		}))
+		return
 	}
 
 	body := struct {

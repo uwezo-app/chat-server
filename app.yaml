@@ -37,4 +37,3 @@ manual_scaling:
 
 beta_settings:
   cloud_sql_instances: uwezo-app-323117:us-central1:uwezoapp-db
-

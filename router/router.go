@@ -70,6 +70,43 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 	=================
 	*/
 
+	/**
+	=================
+		ADMIN
+	=================
+	*/
+	r.HandleFunc("/admin/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.AdminRegistrationHandler(dbase, w, r)
+		}
+	})
+
+	r.HandleFunc("/admin/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.AdminLoginHandler(dbase, w, r)
+		}
+	})
+
+	r.HandleFunc("/admin/logout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.AdminLogoutHandler(dbase, w, r)
+		}
+	})
+	/**
+	=================
+		END ADMIN
+	=================
+	*/
+
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
