@@ -27,25 +27,18 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 	user := &db.Psychologist{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		return
-	}
-
-	var password []byte
-	password, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		errorResponse := utils.ErrorResponse{
+		_ = json.NewEncoder(w).Encode(utils.ErrorResponse{
 			Code:    http.StatusInternalServerError,
-			Message: "Something went wrong",
-		}
-		log.Println(json.NewEncoder(w).Encode(errorResponse))
+			Message: "An error occurred",
+		})
 		return
 	}
 
-	user.Password = string(password)
-	user.Profile = db.Profile{
-		ID: 0,
+	user.Password = utils.HashPassword(user.Password, w)
+	if user.Password == "" {
+		return
 	}
 
 	rs := dbase.Create(&user)

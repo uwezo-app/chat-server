@@ -15,6 +15,7 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Use(CommonMiddleware)
+	r.Use(mux.CORSMethodMiddleware(r))
 
 	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		controller.CreatePsychologist(dbase, w, r)
@@ -82,7 +83,7 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 		} else if r.Method == http.MethodPost {
 			controller.AdminRegistrationHandler(dbase, w, r)
 		}
-	})
+	}).Methods(http.MethodPost, http.MethodOptions)
 
 	r.HandleFunc("/admin/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -91,7 +92,7 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 		} else if r.Method == http.MethodPost {
 			controller.AdminLoginHandler(dbase, w, r)
 		}
-	})
+	}).Methods(http.MethodPost, http.MethodOptions)
 
 	r.HandleFunc("/admin/logout", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -100,23 +101,54 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 		} else if r.Method == http.MethodPost {
 			controller.AdminLogoutHandler(dbase, w, r)
 		}
-	})
+	}).Methods(http.MethodGet, http.MethodOptions)
 	/**
 	=================
 		END ADMIN
 	=================
 	*/
 
-	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Max-Age", "86400")
-	}).Methods(http.MethodOptions)
+	/**
+	=================
+	Patient
+	=================
+	*/
+	r.HandleFunc("/patient/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.PatientLoginHandler(dbase, w, r)
+		}
+	}).Methods(http.MethodPost, http.MethodOptions)
+
+	r.HandleFunc("/patient/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.CreatePatient(dbase, w, r)
+		}
+	}).Methods(http.MethodPost, http.MethodOptions)
+
+	r.HandleFunc("/patient/logout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.PatientLoginHandler(dbase, w, r)
+		}
+	}).Methods(http.MethodGet, http.MethodOptions)
+	/**
+	=================
+	Patient
+	=================
+	*/
 
 	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		server.ChatHandler(hub, dbase, w, r)
 	})
 
-	r.Use(mux.CORSMethodMiddleware(r))
 	// Auth route
 	// s := r.PathPrefix("/auth").Subrouter()
 	// s.Use(auth.JwtVerify)

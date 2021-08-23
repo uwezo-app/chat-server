@@ -7,6 +7,7 @@ import (
 type Patient struct {
 	gorm.Model
 	NickName string `json:"NickName"`
+	Password string `json:"Password"`
 
 	PairedUsers []PairedUsers `gorm:"foreignKey:PatientID"`
 }

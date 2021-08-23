@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type ErrorResponse struct {
@@ -24,4 +26,20 @@ func DecodeRequestBody(w http.ResponseWriter, r *http.Request, t interface{}) {
 		log.Println(json.NewEncoder(w).Encode(errorResponse))
 		return
 	}
+}
+
+func HashPassword(pass string, w http.ResponseWriter) string {
+	password, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		errorResponse := ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Something went wrong",
+		}
+		log.Println(json.NewEncoder(w).Encode(errorResponse))
+		return ""
+	}
+
+	return string(password)
 }

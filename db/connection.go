@@ -21,7 +21,7 @@ func ConnectDB() *gorm.DB {
 		log.Println(err)
 	}
 
-	dns := getDNS()
+	dns := resolveDNS()
 
 	db, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 	if err != nil {
@@ -31,13 +31,13 @@ func ConnectDB() *gorm.DB {
 	tables := []interface{}{&Admin{}, &Patient{}, &Psychologist{}}
 
 	// Migrate the schema
-	db.Migrator().AutoMigrate(tables...)
+	log.Println(db.Migrator().AutoMigrate(tables...))
 
 	log.Printf("Successfully connected! %v\n", dns)
 	return db
 }
 
-func getDNS() string {
+func resolveDNS() string {
 
 	if os.Getenv("APP_ENV") == "development" {
 		user := os.Getenv("DATABASE_USER")
