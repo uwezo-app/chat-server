@@ -207,8 +207,8 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 	tokenString := r.URL.Query().Get("tokenString")
 	claims, err := utils.ParseTokenWithClaims(tokenString)
 	if err != nil {
-		log.Printf("Error: %v\n", err)
-		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
+		log.Printf("Token parse: %v\n", err)
+		http.Error(w, "Error: " + err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -229,16 +229,13 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 		sendJSON,
 		notify,
 	}
+
 	userConn := &ConnectedClient{
 		UserID:   claims.UserID,
 		Client:   client,
 		LastSeen: time.Now(),
 	}
 	client.Hub.Register <- userConn
-	// only send to patients
-	// if claims.Email == "" {
-	// 	client.Hub.GetUsers <- client
-	// }
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.

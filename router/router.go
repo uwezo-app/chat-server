@@ -136,7 +136,7 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 		} else if r.Method == http.MethodPost {
-			controller.PatientLoginHandler(dbase, w, r)
+			controller.PatientLogoutHandler(dbase, w, r)
 		}
 	}).Methods(http.MethodGet, http.MethodOptions)
 	/**

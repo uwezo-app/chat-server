@@ -52,22 +52,22 @@ func CreatePsychologist(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	body := struct {
-		Name string
-		Link string
-	}{
-		Name: fmt.Sprintf("%s %s", user.FirstName, user.LastName),
-		Link: "https://google.com",
-	}
+	// body := struct {
+	// 	Name string
+	// 	Link string
+	// }{
+	// 	Name: fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+	// 	Link: "https://google.com",
+	// }
 
-	go func(dbase *gorm.DB, email string, subject string, HTMLTemp string, body interface{}) {
-		err := utils.SendEmail(dbase, email, subject, HTMLTemp, body)
-		if err != nil {
-			log.Println(err)
-			_ = json.NewEncoder(w).Encode(err.Error())
-			return
-		}
-	}(dbase, user.Email, "Welcome", "templates/email/confirm.html", body)
+	// go func(dbase *gorm.DB, email string, subject string, HTMLTemp string, body interface{}) {
+	// 	err := utils.SendEmail(dbase, email, subject, HTMLTemp, body)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		_ = json.NewEncoder(w).Encode(err.Error())
+	// 		return
+	// 	}
+	// }(dbase, user.Email, "Welcome", "templates/email/confirm.html", body)
 
 	w.WriteHeader(http.StatusCreated)
 	log.Println(json.NewEncoder(w).Encode(user))
