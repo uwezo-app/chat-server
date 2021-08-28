@@ -145,6 +145,19 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 	=================
 	*/
 
+	r.HandleFunc("/chats", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetConversation(dbase, w, r)
+	}).Methods(http.MethodGet)
+
+	r.HandleFunc("/chats/pair", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		} else if r.Method == http.MethodPost {
+			controller.PairUsers(hub, dbase, w, r)
+		}
+	}).Methods(http.MethodPost, http.MethodOptions)
+
 	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		server.ChatHandler(hub, dbase, w, r)
 	})

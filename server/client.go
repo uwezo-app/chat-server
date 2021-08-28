@@ -37,6 +37,11 @@ type Chat struct {
 	Message string `json:"message"`
 }
 
+type Notification struct {
+	Connected bool `json:"Connected"`
+				Client    *Client
+}
+
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
@@ -81,7 +86,7 @@ type Client struct {
 	SendJSON chan interface{}
 
 	// Notification channel
-	Notify chan []byte
+	Notify chan interface{}
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -114,8 +119,10 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 
 		chatMessage := bytes.TrimSpace(bytes.Replace([]byte(chat.Message), newline, space, -1))
 		var userConn, ok = c.Hub.Connections[chat.RecipientID]
+		log.Println(chatMessage)
 		if ok {
 			if chat.Flag == "targeted" {
+				log.Println("Sending message to hub in targeted")
 				message := &Message{
 					to:             userConn.Client,
 					from:           c,
@@ -124,6 +131,7 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 				}
 				c.Hub.Targeted <- message
 			} else if chat.Flag == "connectMe" {
+				log.Println("Sending message to hub in connectMe")
 				message := &db.PairedUsers{
 					PatientID:      c.ClientID,
 					PsychologistID: userConn.Client.ClientID,
@@ -132,7 +140,15 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 				}
 				c.Hub.Pair <- message
 			} else if chat.Flag == "getUsers" {
+				log.Println("Sending message to hub in getUsers")
 				c.Hub.GetUsers <- c
+			}
+		} else {
+			// Send the message to the hub
+			log.Println("Sending message to hub in else")
+			c.Hub.Notify <- Notification {
+				Connected: false,
+				Client:    c,
 			}
 		}
 	}
@@ -183,14 +199,17 @@ func (c *Client) writePump() {
 				return
 			}
 
-		case conns := <-c.SendJSON:
-			if err := c.Conn.WriteJSON(conns); err != nil {
+		case jsonData := <-c.SendJSON:
+			if err := c.Conn.WriteJSON(jsonData); err != nil {
 				log.Printf("Error: %v\n", err)
 				return
 			}
 
 		case message := <-c.Notify:
-			log.Println(c.Conn.WriteMessage(ws.CloseTryAgainLater, message))
+			if err := c.Conn.WriteJSON(message); err != nil {
+				log.Printf("Error: %v\n", err)
+				return
+			}
 
 		case <-ticker.C:
 			log.Println(c.Conn.SetWriteDeadline(time.Now().Add(writeWait)))
@@ -208,7 +227,7 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 	claims, err := utils.ParseTokenWithClaims(tokenString)
 	if err != nil {
 		log.Printf("Token parse: %v\n", err)
-		http.Error(w, "Error: " + err.Error(), http.StatusBadRequest)
+		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -219,7 +238,7 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	send, sendJSON, notify := make(chan []byte), make(chan interface{}), make(chan []byte)
+	send, sendJSON, notify := make(chan []byte), make(chan interface{}), make(chan interface{})
 	client := &Client{
 		claims.UserID,
 		claims.Name,

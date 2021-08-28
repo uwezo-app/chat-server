@@ -7,13 +7,13 @@ type Psychologist struct {
 
 	FirstName string `json:"FirstName"`
 	LastName  string `json:"LastName"`
-	Email     string `json:"Email" gorm:"primaryKey;autoIncrement:false"`
+	Email     string `json:"Email"`
 	Password  string `json:"Password"`
 	IsVerfied bool   `json:"IsVerfied" gorm:"default:false"`
 	IsDeleted bool   `json:"IsDeleted" gorm:"default:false"`
 
-	PairedUsers []PairedUsers `gorm:"foreignKey:PsychologistID"`
-	Profile     Profile       `gorm:"foreignKey:Psychologist"`
+	PairedUsers []PairedUsers
+	Profile     Profile `gorm:"foreignKey:Psychologist"`
 }
 
 type Profile struct {
