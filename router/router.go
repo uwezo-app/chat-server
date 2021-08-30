@@ -158,6 +158,14 @@ func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 		}
 	}).Methods(http.MethodPost, http.MethodOptions)
 
+	r.HandleFunc("/conversations", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetConnections(dbase, w, r)
+	})
+
+	r.HandleFunc("/conversations/patient", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetPatientConnections(dbase, w, r)
+	})
+
 	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		server.ChatHandler(hub, dbase, w, r)
 	})
