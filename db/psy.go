@@ -24,5 +24,7 @@ type Profile struct {
 	PhoneNumber  string `json:"PhoneNumber"`
 	Image        string `json:"Image"`
 	Country      string `json:"Country"`
+	FocusedArea  string `json:"FocusedArea"`
+	Address      string `json:"Address"`
 	Description  string `json:"Description"`
 }

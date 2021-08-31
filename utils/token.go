@@ -39,6 +39,26 @@ func GenerateToken(user *db.Psychologist, expiresAt int64) (token string, err er
 	return tokenString, nil
 }
 
+func GeneratePatientToken(user *db.Patient, expiresAt int64) (token string, err error) {
+	claims := db.CustomClaims{
+		UserID: user.ID,
+		Name:   user.NickName,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expiresAt,
+		},
+	}
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+
+	tokenString, err := t.SignedString([]byte(os.Getenv("SECRET")))
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
 func ParseTokenWithClaims(tokenString string) (*db.CustomClaims, error) {
 	tk, err := jwt.ParseWithClaims(tokenString, &db.CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("SECRET")), nil
