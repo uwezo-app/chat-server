@@ -28,7 +28,7 @@ func ConnectDB() *gorm.DB {
 		log.Fatalf("Could not connect to database %v\n", err)
 	}
 
-	tables := []interface{}{&Admin{}, &Patient{}, &Psychologist{}, &PairedUsers{}}
+	tables := []interface{}{&Admin{}, &Patient{}, &Psychologist{}, &PairedUsers{}, &Conversation{}}
 
 	// Migrate the schema
 	log.Println(db.Migrator().AutoMigrate(tables...))

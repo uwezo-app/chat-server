@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/uwezo-app/chat-server/db"
-	"github.com/uwezo-app/chat-server/server"
 	"gorm.io/gorm"
 )
 
@@ -39,19 +38,12 @@ func GetConversation(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(conv)
 }
 
-func PairUsers(hub *server.Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PairUsers(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var pair db.PairedUsers
 	err := json.NewDecoder(r.Body).Decode(&pair)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(err)
-		return
-	}
-
-	_, ok := hub.Connections[pair.PsychologistID]
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode("Psychologist not found")
 		return
 	}
 
@@ -152,4 +144,40 @@ func GetPatientConnections(dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func NewChat(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	var chat db.Conversation
+	err := json.NewDecoder(r.Body).Decode(&chat)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	result := dbase.Create(&chat)
+	if result.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(result.Error)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(chat.Message)
+}
+
+func GetChats(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	var queries = r.URL.Query()
+	var chat = []db.Conversation{}
+	cnvId, _ := strconv.Atoi(queries.Get("ConversationID"))
+
+	res := dbase.Where(db.Conversation{ConversationID: uint(cnvId)}).Find(&chat)
+	if res.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(res.Error)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(chat)
 }
