@@ -29,12 +29,16 @@ func ConnectDB() *gorm.DB {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&Psychologist{}, &TokenString{})
+	err = db.AutoMigrate(
+		&Psychologist{},
+		&Patient{},
+	)
+
 	if err != nil {
 		log.Fatalf("Could not run migrations: %v\n", err)
 	}
 
-	log.Println("Successfully connected!", db)
+	log.Printf("Successfully connected! %v\n", dns)
 	return db
 }
 

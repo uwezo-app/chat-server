@@ -7,14 +7,22 @@ type Psychologist struct {
 
 	FirstName string `json:"FirstName"`
 	LastName  string `json:"LastName"`
-	Email     string `gorm:"type:varchar(100);unique_index;Email"`
-	Password  string `json:"password"`
+	Email     string `json:"Email" gorm:"primaryKey;autoIncrement:false"`
+	Password  string `json:"Password"`
+	IsVerfied bool   `json:"IsVerfied" gorm:"default:false"`
+	IsDeleted bool   `json:"IsDeleted" gorm:"default:false"`
+
+	PairedUsers []PairedUsers `gorm:"foreignKey:PsychologistID"`
+	Profile     Profile       `gorm:"foreignKey:Psychologist"`
 }
 
 type Profile struct {
 	gorm.Model
 
-	Psychologist *Psychologist `json:"Psychologist"`
-	Image        string        `json:"Image"`
-	Description  string        `json:"Description"`
+	ID           uint
+	Psychologist uint   `gorm:"primaryKey;autoIncrement:false"`
+	PhoneNumber  string `json:"PhoneNumber"`
+	Image        string `json:"Image"`
+	Country      string `json:"Country"`
+	Description  string `json:"Description"`
 }

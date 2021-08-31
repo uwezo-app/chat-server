@@ -3,28 +3,81 @@ package router
 import (
 	"net/http"
 
+	"gorm.io/gorm"
+
 	"github.com/gorilla/mux"
-	controllers "github.com/uwezo-app/chat-server/controller"
+
+	"github.com/uwezo-app/chat-server/controller"
+	"github.com/uwezo-app/chat-server/server"
 )
 
-func Handlers() *mux.Router {
+func Handlers(hub *server.Hub, dbase *gorm.DB) *mux.Router {
 
 	r := mux.NewRouter().StrictSlash(true)
 	r.Use(CommonMiddleware)
 
-	r.HandleFunc("/register", controllers.CreatePsychologist).Methods(http.MethodPost)
+	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		controller.CreatePsychologist(dbase, w, r)
+	}).Methods(http.MethodPost)
 	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 	}).Methods(http.MethodOptions)
-	r.HandleFunc("/login", controllers.LoginHandler).Methods(http.MethodPost)
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		controller.LoginHandler(dbase, w, r)
+	}).Methods(http.MethodPost)
+
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 	}).Methods(http.MethodOptions)
-	r.HandleFunc("/reset", controllers.ResetHandler).Methods(http.MethodPost)
-	r.HandleFunc("/logout", controllers.LogoutHandler).Methods(http.MethodPost)
-	r.HandleFunc("/chat", controllers.ChatHandler)
+
+	r.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
+		controller.ResetHandler(dbase, w, r)
+	}).Methods(http.MethodPost)
+
+	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		controller.LogoutHandler(dbase, w, r)
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/psychologists/profile/{Email}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			controller.GetProfileHandler(dbase, w, r)
+		} else if r.Method == http.MethodPost {
+			controller.UpdateProfileHandler(dbase, w, r)
+		} else if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		}
+	}).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
+
+	/**
+	=================
+		METRICS
+	=================
+	*/
+	r.HandleFunc("/psychologists", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetPsychologists(dbase, w, r)
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/psychologists/number", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetNumberofPsychologists(dbase, w, r)
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/patients/number", func(w http.ResponseWriter, r *http.Request) {
+		controller.GetNumberofPatients(dbase, w, r)
+	}).Methods(http.MethodGet)
+	/**
+	=================
+		END METRICS
+	=================
+	*/
+
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+	}).Methods(http.MethodOptions)
+
+	r.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+		server.ChatHandler(hub, dbase, w, r)
+	})
 
 	r.Use(mux.CORSMethodMiddleware(r))
 	// Auth route
