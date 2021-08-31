@@ -10,7 +10,6 @@ import (
 
 	ws "github.com/gorilla/websocket"
 
-	"github.com/uwezo-app/chat-server/db"
 	"github.com/uwezo-app/chat-server/utils"
 )
 
@@ -27,19 +26,19 @@ type ConnectedClient struct {
 
 type Chat struct {
 	// broadcast|targeted
-	Flag string `json:"flag"`
+	Flag string `json:"Flag"`
 
 	// the receiving party on a targeted Message
-	RecipientID uint `json:"recipient"`
+	RecipientID uint `json:"Recipient"`
 
-	ConversationID uint
+	ConversationID uint `json:"ConversationID"`
 
-	Message string `json:"message"`
+	Message string `json:"Message"`
 }
 
 type Notification struct {
 	Connected bool `json:"Connected"`
-				Client    *Client
+	Client    *Client
 }
 
 const (
@@ -130,23 +129,11 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 					conversationID: chat.ConversationID,
 				}
 				c.Hub.Targeted <- message
-			} else if chat.Flag == "connectMe" {
-				log.Println("Sending message to hub in connectMe")
-				message := &db.PairedUsers{
-					PatientID:      c.ClientID,
-					PsychologistID: userConn.Client.ClientID,
-					EncryptionKey:  "xaYncvOpM2-/a\\s@0)&s",
-					PairedAt:       time.Now(),
-				}
-				c.Hub.Pair <- message
-			} else if chat.Flag == "getUsers" {
-				log.Println("Sending message to hub in getUsers")
-				c.Hub.GetUsers <- c
 			}
 		} else {
 			// Send the message to the hub
 			log.Println("Sending message to hub in else")
-			c.Hub.Notify <- Notification {
+			c.Hub.Notify <- Notification{
 				Connected: false,
 				Client:    c,
 			}
