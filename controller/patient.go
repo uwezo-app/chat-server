@@ -21,7 +21,18 @@ func CreatePatient(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var user db.Patient
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		log.Fatal("Could not read the sent data")
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(utils.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "An error occurred",
+		})
+		return
+	}
+
+	user.Password = utils.HashPassword(user.Password, w)
+	if user.Password == "" {
+		return
 	}
 
 	// Write the nickname to the database
@@ -33,6 +44,7 @@ func CreatePatient(dbase *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	if er := json.NewEncoder(w).Encode(user); er != nil {
 		log.Println(er)
 	}
@@ -42,7 +54,7 @@ func PatientLoginHandler(dbase *gorm.DB, w http.ResponseWriter, r *http.Request)
 	var patient db.Patient
 
 	json.NewDecoder(r.Body).Decode(&patient)
-	result := dbase.Where("NickName = ?", patient.NickName).First(&patient)
+	result := dbase.Where(db.Patient{NickName: patient.NickName}).First(&patient)
 	if erro := result.Error; erro != nil {
 		log.Println(erro)
 		w.WriteHeader(http.StatusNotFound)

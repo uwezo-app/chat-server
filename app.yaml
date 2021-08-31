@@ -11,7 +11,7 @@ env_variables:
   # For Cloud SQL 2nd generation instances, this should be in the form of "project:region:instance".
   GOOGLE_DB_NAME: uwezoapp
   GOOGLE_DB_PASSOWRD: POJCDkDOcqjz7iBE
-  GOOGLE_DB_USER: uwezoapp
+  GOOGLE_DB_USER: postgres
   INSTANCE_CONNECTION_NAME: uwezo-app-323117:us-central1:uwezoapp-db
   APP_ENV: production
   SECRET: J-jgSxotNE1wcWGa2LV_D6wQs4cGMvVkWnATJq_yFkbyzlWoqHDN-b9iH-3aH-NQuJQHawJkdm5VbqePpORR-DjICaO0tI9SQ5IRipwklPRZW
@@ -37,4 +37,3 @@ manual_scaling:
 
 beta_settings:
   cloud_sql_instances: uwezo-app-323117:us-central1:uwezoapp-db
-

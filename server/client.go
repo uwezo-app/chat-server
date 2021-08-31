@@ -10,7 +10,6 @@ import (
 
 	ws "github.com/gorilla/websocket"
 
-	"github.com/uwezo-app/chat-server/db"
 	"github.com/uwezo-app/chat-server/utils"
 )
 
@@ -27,14 +26,19 @@ type ConnectedClient struct {
 
 type Chat struct {
 	// broadcast|targeted
-	Flag string `json:"flag"`
+	Flag string `json:"Flag"`
 
 	// the receiving party on a targeted Message
-	RecipientID uint `json:"recipient"`
+	RecipientID uint `json:"Recipient"`
 
-	ConversationID uint
+	ConversationID uint `json:"ConversationID"`
 
-	Message string `json:"message"`
+	Message string `json:"Message"`
+}
+
+type Notification struct {
+	Connected bool `json:"Connected"`
+	Client    *Client
 }
 
 const (
@@ -81,7 +85,7 @@ type Client struct {
 	SendJSON chan interface{}
 
 	// Notification channel
-	Notify chan []byte
+	Notify chan interface{}
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -114,8 +118,10 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 
 		chatMessage := bytes.TrimSpace(bytes.Replace([]byte(chat.Message), newline, space, -1))
 		var userConn, ok = c.Hub.Connections[chat.RecipientID]
+		log.Println(chatMessage)
 		if ok {
 			if chat.Flag == "targeted" {
+				log.Println("Sending message to hub in targeted")
 				message := &Message{
 					to:             userConn.Client,
 					from:           c,
@@ -123,16 +129,13 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 					conversationID: chat.ConversationID,
 				}
 				c.Hub.Targeted <- message
-			} else if chat.Flag == "connectMe" {
-				message := &db.PairedUsers{
-					PatientID:      c.ClientID,
-					PsychologistID: userConn.Client.ClientID,
-					EncryptionKey:  "xaYncvOpM2-/a\\s@0)&s",
-					PairedAt:       time.Now(),
-				}
-				c.Hub.Pair <- message
-			} else if chat.Flag == "getUsers" {
-				c.Hub.GetUsers <- c
+			}
+		} else {
+			// Send the message to the hub
+			log.Println("Sending message to hub in else")
+			c.Hub.Notify <- Notification{
+				Connected: false,
+				Client:    c,
 			}
 		}
 	}
@@ -183,14 +186,17 @@ func (c *Client) writePump() {
 				return
 			}
 
-		case conns := <-c.SendJSON:
-			if err := c.Conn.WriteJSON(conns); err != nil {
+		case jsonData := <-c.SendJSON:
+			if err := c.Conn.WriteJSON(jsonData); err != nil {
 				log.Printf("Error: %v\n", err)
 				return
 			}
 
 		case message := <-c.Notify:
-			log.Println(c.Conn.WriteMessage(ws.CloseTryAgainLater, message))
+			if err := c.Conn.WriteJSON(message); err != nil {
+				log.Printf("Error: %v\n", err)
+				return
+			}
 
 		case <-ticker.C:
 			log.Println(c.Conn.SetWriteDeadline(time.Now().Add(writeWait)))
@@ -207,7 +213,7 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 	tokenString := r.URL.Query().Get("tokenString")
 	claims, err := utils.ParseTokenWithClaims(tokenString)
 	if err != nil {
-		log.Printf("Error: %v\n", err)
+		log.Printf("Token parse: %v\n", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -219,7 +225,7 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	send, sendJSON, notify := make(chan []byte), make(chan interface{}), make(chan []byte)
+	send, sendJSON, notify := make(chan []byte), make(chan interface{}), make(chan interface{})
 	client := &Client{
 		claims.UserID,
 		claims.Name,
@@ -229,16 +235,13 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 		sendJSON,
 		notify,
 	}
+
 	userConn := &ConnectedClient{
 		UserID:   claims.UserID,
 		Client:   client,
 		LastSeen: time.Now(),
 	}
 	client.Hub.Register <- userConn
-	// only send to patients
-	// if claims.Email == "" {
-	// 	client.Hub.GetUsers <- client
-	// }
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.

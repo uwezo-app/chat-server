@@ -6,9 +6,11 @@ import (
 
 type Patient struct {
 	gorm.Model
-	NickName string `json:"NickName"`
 
-	PairedUsers []PairedUsers `gorm:"foreignKey:PatientID"`
+	NickName string `json:"NickName"`
+	Password string `json:"Password"`
+
+	PairedUsers []PairedUsers
 }
 
 func (p *Patient) TableName() string {

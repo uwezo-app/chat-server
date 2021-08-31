@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -38,6 +37,8 @@ type Hub struct {
 
 	// Unregister requests from the connections
 	Unregister chan *ConnectedClient
+
+	Notify chan Notification
 }
 
 func NewHub() *Hub {
@@ -49,6 +50,7 @@ func NewHub() *Hub {
 		Unregister:  make(chan *ConnectedClient),
 		Connections: make(map[uint]*ConnectedClient),
 		GetUsers:    make(chan *Client),
+		Notify:      make(chan Notification),
 	}
 }
 
@@ -73,15 +75,22 @@ func (h *Hub) Run(dbase *gorm.DB) {
 				_ = c.Client.Conn.Close()
 			}
 
-		case <-h.Broadcast:
-		//	for c := range h.connections {
-		//		select {
-		//		case h.connections[c].Client.send <- msg:
-		//		default:
-		//			close(h.connections[c].Client.send)
-		//			delete(h.connections, c)
-		//		}
-		//	}
+		case msg := <-h.Broadcast:
+			for c := range h.Connections {
+				select {
+				case h.Connections[c].Client.Send <- msg:
+				default:
+					close(h.Connections[c].Client.Send)
+					delete(h.Connections, c)
+				}
+			}
+
+		case msg := <-h.Notify:
+			msg.Client.Notify <- struct {
+				Connected bool `json:"connected"`
+			}{
+				Connected: msg.Connected,
+			}
 
 		case c := <-h.GetUsers:
 			c.SendJSON <- &struct {
@@ -113,8 +122,22 @@ func (h *Hub) Run(dbase *gorm.DB) {
 			// Notify the users of the connection
 			patient := h.Connections[pairReq.PatientID]
 			psy := h.Connections[pairReq.PsychologistID]
-			patient.Client.Send <- []byte(fmt.Sprintf("ConversationID %v", pairReq.ID))
-			psy.Client.Send <- []byte(fmt.Sprintf("ConversationID %v", pairReq.ID))
+
+			patient.Client.SendJSON <- struct {
+				ConversationID uint `json:"ConversationID"`
+				Conncted       bool `json:"Connected"`
+			}{
+				ConversationID: pairReq.ID,
+				Conncted:       true,
+			}
+
+			psy.Client.SendJSON <- struct {
+				ConversationID uint `json:"ConversationID"`
+				Conncted       bool `json:"Connected"`
+			}{
+				ConversationID: pairReq.ID,
+				Conncted:       true,
+			}
 
 		case tMessage := <-h.Targeted:
 			select {
