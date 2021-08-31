@@ -130,13 +130,6 @@ func (c *Client) readPump(dbase *gorm.DB, conn *ConnectedClient) {
 				}
 				c.Hub.Targeted <- message
 			}
-		} else {
-			// Send the message to the hub
-			log.Println("Sending message to hub in else")
-			c.Hub.Notify <- Notification{
-				Connected: false,
-				Client:    c,
-			}
 		}
 	}
 }
@@ -242,6 +235,7 @@ func ChatHandler(hub *Hub, dbase *gorm.DB, w http.ResponseWriter, r *http.Reques
 		LastSeen: time.Now(),
 	}
 	client.Hub.Register <- userConn
+	log.Printf("chat?%s", tokenString)
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
